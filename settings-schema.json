@@ -4,5 +4,11 @@
     "default" : "",
     "description" : "Process name to monitor (if not found the Cinnamon process is used):",
     "tooltip" : "Set the name of the process you want to monitor here.  Note, for now, no consideration is taken for multiple instances of the same program.  Undefined behavior."
- }
+ },
+ "enable-padding" : {
+    "type" : "checkbox",
+    "default" : false,
+    "description" : "Use text padding",
+    "tooltip" : "Switches font to monospace and uses text padding to keep the applet the same size."
+  }
 }

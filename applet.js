@@ -16,6 +16,11 @@ const MB = 1048576;
 const KB =    1024;
 const MINUTE = 60000;
 
+// Width in characters of the ram and cpu text
+// ram = "9999.99" cpu = "100.0"
+const RAM_WIDTH = 7;
+const CPU_WIDTH = 5;
+
 function MyApplet(orientation, panel_height, instance_id) {
     this._init(orientation, panel_height, instance_id);
 }
@@ -27,8 +32,6 @@ MyApplet.prototype = {
     _init: function(orientation, panel_height, instance_id) {        
         Applet.TextIconApplet.prototype._init.call(this, orientation, panel_height, instance_id);
 
-        this._applet_label.set_style("font-weight: normal;");
-
         this.process_display_name = "Cinnamon";
 
         this.settings = new Settings.AppletSettings(this, "cinnamonitor@cinnamon.org", instance_id);
@@ -36,10 +39,16 @@ MyApplet.prototype = {
         this.settings.bindProperty(Settings.BindingDirection.IN,
                                  "process-name",
                                  "process_name",
-                                 this.on_settings_changed,
+                                 this.on_process_changed,
                                  null);
 
-        this.on_settings_changed();
+        this.settings.bindProperty(Settings.BindingDirection.IN,
+                                 "enable-padding",
+                                 "enable_padding",
+                                 this.on_padding_changed,
+                                 null);
+
+        this.on_process_changed();
 
         this._orientation = orientation;
         this.cinnamonMem = new CinnamonMemMonitor(this.pid);
@@ -72,25 +81,36 @@ MyApplet.prototype = {
         return pid;
     },
 
-    on_settings_changed: function () {
+    on_process_changed: function () {
         if (this.process_name == "")
             this.pid = global.get_pid();
         else
             this.pid = this.get_pid_for_process_name(this.process_name);
         this.cinnamonMem = new CinnamonMemMonitor(this.pid);
 
-        let test_string;
+        this.on_padding_changed();
+    },
 
-        if (this.pid.toString() == global.get_pid().toString()) {
-            test_string = "0000m, 100.0%";
+    on_padding_changed: function () {
+        if (this.enable_padding) {
+            this._applet_label.set_style("font-family: monospace; font-weight: normal;");
+            this.actor.set_width(-1);
         } else {
-            test_string = this.process_name + ": 0000m, 100.0%";
-        }
+            this._applet_label.set_style("font-family: sans-serif; font-weight: normal;");
 
-        let layout = this._applet_label.create_pango_layout(test_string);
-        let w, h;
-        [w, h] = layout.get_pixel_size();
-        this.actor.width = w;
+            let test_string;
+
+            if (this.pid.toString() == global.get_pid().toString()) {
+                test_string = "0000m, 100.0%";
+            } else {
+                test_string = this.process_name + ": 0000m, 100.0%";
+            }
+
+            let layout = this._applet_label.create_pango_layout(test_string);
+            let w, h;
+            [w, h] = layout.get_pixel_size();
+            this.actor.set_width(w);
+        }
     },
 
     _pulse: function() {
@@ -119,9 +139,14 @@ MyApplet.prototype = {
         ttip += "-------\n";
         ttip += "click to reset or reconnect to the process";
 
-        let curMb = this.cinnamonMem.getCurMb().toFixed(2);
-        let cpuUsage = (this.cinnamonMem.getCpuUsage()*100).toFixed(1);
+        let curMb = this.cinnamonMem.getCurMb().toFixed(2).toString();
+        let cpuUsage = (this.cinnamonMem.getCpuUsage()*100).toFixed(1).toString();
         
+        if (this.enable_padding) {
+                curMb = " ".repeat(RAM_WIDTH - curMb.length) + curMb;
+                cpuUsage = " ".repeat(CPU_WIDTH - cpuUsage.length) + cpuUsage;
+        }
+
         let label;
 
         if (this.process_display_name == "Cinnamon") {
@@ -147,7 +172,7 @@ MyApplet.prototype = {
 
     on_applet_clicked: function(event) {
         this.initialTime = new Date();
-        this.on_settings_changed();
+        this.on_process_changed();
     },
     
     on_orientation_changed: function (orientation) {
