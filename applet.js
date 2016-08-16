@@ -16,6 +16,11 @@ const MB = 1048576;
 const KB =    1024;
 const MINUTE = 60000;
 
+// Prevent cascading memory usage when monitoring cinnamon
+// by only updating the value once the difference is less than
+// or greater than MIN_MAX_HYSTERESIS
+const MIN_MAX_HYSTERESIS = 100 * KB;
+
 function MyApplet(orientation, panel_height, instance_id) {
     this._init(orientation, panel_height, instance_id);
 }
@@ -184,9 +189,9 @@ CinnamonMemMonitor.prototype = {
         GTop.glibtop.get_proc_time(this.procTime, this.pid);
         GTop.glibtop_get_cpu(this.gtop);
 
-        if (this.procMem.resident > this.memMax)
+        if (this.procMem.resident > this.memMax + MIN_MAX_HYSTERESIS)
             this.memMax = this.procMem.resident;
-        else if (this.procMem.resident < this.memMin)
+        else if (this.procMem.resident < this.memMin - MIN_MAX_HYSTERESIS)
             this.memMin = this.procMem.resident;
     },
     
